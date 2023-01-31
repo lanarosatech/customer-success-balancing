@@ -3,23 +3,23 @@ require 'timeout'
 
 class CustomerSuccessBalancing
   def initialize(customer_success, customers, away_customer_success)
-    @customer_success = customer_success
-    @customers = customers
-    @away_customer_success = away_customer_success
+    @customer_success = customer_success # id and CS experience level
+    @customers = customers # id ans Customers experience level
+    @away_customer_success = away_customer_success # CustomerSuccess id`s unavailable
   end
 
-  # Returns the ID of the customer success with most customers
   def execute
-    customer_success_attending = @away_customer_success.any? ? fetch_customer_success_attending : @customer_success
+    customer_success_attending = @away_customer_success.any? ? search_customer_success : @customer_success
 
+    # that orders customers and customer success by score
     ordered_customer_success = order_by_score(customer_success_attending)
-
     ordered_customers = @customers.empty? ? [] : order_by_score(@customers)
 
+    # distributes customers to customer success
     distribute_customers_per_customer_success(ordered_customer_success, ordered_customers)
-
     customer_success_with_most_customers = group_by_most_attendings(ordered_customer_success)
 
+    # return the ID from customer success with most customers
     return 0 unless customer_success_with_most_customers[1].count == 1
 
     customer_success_with_most_customers[1].first[:id]
@@ -27,20 +27,18 @@ class CustomerSuccessBalancing
 
   private
 
-  def fetch_customer_success_attending
+  def search_customer_success
     @customer_success.reject! { |customer_success| @away_customer_success.include?(customer_success[:id]) }
   end
+  # This method removes any customer_success who are in the away_customer_success array from the customer_success array.
+  # This is done by looping through the customer_success array and rejecting any customer_success who have an id that is
+  # included in the away_customer_success array.
 
   def order_by_score(objects)
     objects.sort_by { |object| object[:score] }
   end
-
-  def distribute_customers_per_customer_success(ordered_customer_success, ordered_customers)
-    ordered_customer_success.each_with_index do |customer_success, index|
-      customers = find_customers(ordered_customers, customer_success, index, ordered_customer_success)
-      customer_success[:customers_attending] = customers.empty? ? [] : customers
-    end
-  end
+  # This is a Ruby code snippet that can be used to order a list of data objects by their score.
+  # The list of data objects is passed in as an argument and then the code sorts the list by the score attribute of each object.
 
   def find_customers(ordered_customers, customer_success, index, ordered_customer_success)
     return ordered_customers.select { |customer| customer[:score] <= customer_success[:score] } if index.zero?
@@ -49,12 +47,29 @@ class CustomerSuccessBalancing
       customer[:score] <= customer_success[:score] && customer[:score] > ordered_customer_success[index - 1][:score]
     end
   end
+  # This is a method that can be used to find customers who have achieved a certain level of success (as indicated by a numerical score).
+  # It compares each customer's score against the score of the customer with the highest success and returns all customers who have
+  # achieved a score that is equal to or lower than the highest score. It also takes into account the score of the customer who is
+  # listed before the current customer in the list of ordered customers, and only returns customers who have achieved a score that
+  # is higher than this customer's score.
+
+  def distribute_customers_per_customer_success(ordered_customer_success, ordered_customers)
+    ordered_customer_success.each_with_index do |customer_success, index|
+      customers = find_customers(ordered_customers, customer_success, index, ordered_customer_success)
+      customer_success[:customers_attending] = customers.empty? ? [] : customers
+    end
+  end
+  # This function takes two ordered lists of customer success and customers, and assigns each customer success
+  # with a list of customers attending. It does this by looping through the customer success list, finding the customers
+  # in the customers list that match that customer success, and assigning them to that customer success.
 
   def group_by_most_attendings(customer_success)
     return [] if customer_success.empty?
 
-    customer_success.group_by { |i| i[:customers_attending].count }.sort.reverse.first
+    customer_success.group_by { |index| index[:customers_attending].count }.sort.reverse.first
   end
+  # This function takes in an array of customer success data as an argument and sorts it by the number of customers attending.
+  # It then reverses the sort order, and returns the group with the most attendings.
 end
 
 class CustomerSuccessBalancingTests < Minitest::Test
