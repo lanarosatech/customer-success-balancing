@@ -10,7 +10,6 @@ class CustomerSuccessBalancing
 
   # Returns the ID of the customer success with most customers
   def execute
-    # Write your solution here
     customer_success_attending = @away_customer_success.any? ? fetch_customer_success_attending : @customer_success
 
     ordered_customer_success = order_by_score(customer_success_attending)
@@ -25,6 +24,7 @@ class CustomerSuccessBalancing
 
     customer_success_with_most_customers[1].first[:id]
   end
+
   private
 
   def fetch_customer_success_attending
