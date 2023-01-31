@@ -28,11 +28,10 @@ class CustomerSuccessBalancing
   private
 
   def search_customer_success
-    @customer_success.reject! { |customer_success| @away_customer_success.include?(customer_success[:id]) }
+    @customer_success = @customer_success.select { |cs| !@away_customer_success.include?(cs[:id]) }
   end
-  # This method removes any customer_success who are in the away_customer_success array from the customer_success array.
-  # This is done by looping through the customer_success array and rejecting any customer_success who have an id that is
-  # included in the away_customer_success array.
+  # In this version, instead of using reject! to modify the original array,
+  # select is used to return a new array with only the elements that match the condition.
 
   def order_by_score(objects)
     objects.sort_by { |object| object[:score] }
@@ -41,22 +40,20 @@ class CustomerSuccessBalancing
   # The list of data objects is passed in as an argument and then the code sorts the list by the score attribute of each object.
 
   def find_customers(ordered_customers, customer_success, index, ordered_customer_success)
-    return ordered_customers.select { |customer| customer[:score] <= customer_success[:score] } if index.zero?
-
-    ordered_customers.select do |customer|
-      customer[:score] <= customer_success[:score] && customer[:score] > ordered_customer_success[index - 1][:score]
-    end
+    score_limit = customer_success[:score]
+    lower_bound = index.zero? ? -Float::INFINITY : ordered_customer_success[index - 1][:score]
+    ordered_customers.select { |customer| customer[:score] > lower_bound && customer[:score] <= score_limit }
   end
-  # This is a method that can be used to find customers who have achieved a certain level of success (as indicated by a numerical score).
-  # It compares each customer's score against the score of the customer with the highest success and returns all customers who have
-  # achieved a score that is equal to or lower than the highest score. It also takes into account the score of the customer who is
-  # listed before the current customer in the list of ordered customers, and only returns customers who have achieved a score that
-  # is higher than this customer's score.
+  # In this version, the score limit and the score lower bound are defined as variables before
+  # the select method is called, making the code more readable and easier to understand.
+  # The use of Float::INFINITY to represent a large positive number in the lower bound makes
+  # the code more flexible, as it can handle cases where the index is zero without the need for
+  # a separate if statement.
 
   def distribute_customers_per_customer_success(ordered_customer_success, ordered_customers)
     ordered_customer_success.each_with_index do |customer_success, index|
-      customers = find_customers(ordered_customers, customer_success, index, ordered_customer_success)
-      customer_success[:customers_attending] = customers.empty? ? [] : customers
+      # customers = find_customers(ordered_customers, customer_success, index, ordered_customer_success)
+      customer_success[:customers_attending] = find_customers(ordered_customers, customer_success, index, ordered_customer_success)
     end
   end
   # This function takes two ordered lists of customer success and customers, and assigns each customer success
@@ -133,6 +130,15 @@ class CustomerSuccessBalancingTests < Minitest::Test
       build_scores([100, 99, 88, 3, 4, 5]),
       build_scores([10, 10, 10, 20, 20, 30, 30, 30, 20, 60]),
       [4, 5, 6]
+    )
+    assert_equal 3, balancer.execute
+  end
+
+  def test_scenario_eight
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([2,5,6,7]),
+      build_scores([6]),
+      []
     )
     assert_equal 3, balancer.execute
   end
