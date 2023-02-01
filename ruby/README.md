@@ -1,8 +1,8 @@
 # Sobre esse projeto
 
-Teste destinado a um processo seletivo de emprego.
+Teste destinado a um processo seletivo de vaga de emprego.
 
-O código usado é na linguagem Ruby, verão 3.1.2p20.
+O código usado é na linguagem Ruby, versão 3.1.2p20.
 
 # O Desafio - CustomerSuccess Balancing
 
